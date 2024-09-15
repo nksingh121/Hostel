@@ -31,10 +31,16 @@
         <div class="collapse navbar-collapse">
             <ul class="navbar-nav ml-auto">
                 {% if 'username' in session %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('add_tenant') }}">Add Tenant</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('rent_payments') }}">Manage Rent Payments</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('complaints') }}">Log Complaints</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('menu') }}">Manage Food Menu</a></li>
+                    {% if session['role'] == 'Admin' %}
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('add_tenant') }}">Add Tenant</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('rent_payments') }}">Manage Rent Payments</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('complaints') }}">Log Complaints</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('menu') }}">Manage Food Menu</a></li>
+                    {% elif session['role'] == 'Tenant' %}
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('tenant_profile') }}">Profile</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('log_complaint') }}">Log Complaint</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('food_menu') }}">Food Menu</a></li>
+                    {% endif %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
                 {% else %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
