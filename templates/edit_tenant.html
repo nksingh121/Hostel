@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Tenant</title>
+</head>
+<body>
+    <h1>Edit Tenant Details</h1>
+    <form action="{{ url_for('edit_tenant', tenant_id=tenant['tenant_id']) }}" method="post">
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" value="{{ tenant['name'] }}" required><br><br>
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" value="{{ tenant['email'] }}" required><br><br>
+        <label for="phone">Phone:</label>
+        <input type="text" id="phone" name="phone" value="{{ tenant['phone'] }}" required><br><br>
+        <label for="room_number">Room Number:</label>
+        <input type="text" id="room_number" name="room_number" value="{{ tenant['room_number'] }}" required><br><br>
+        <label for="status">Status:</label>
+        <input type="text" id="status" name="status" value="{{ tenant['status'] }}" required><br><br>
+        <input type="submit" value="Update Tenant">
+    </form>
+    <a href="{{ url_for('index') }}">Back to Tenant List</a>
+</body>
+</html>

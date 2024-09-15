@@ -8,9 +8,16 @@
 </head>
 <body>
     <h1>Tenant List</h1>
+    <a href="{{ url_for('add_tenant') }}">Add New Tenant</a>
+    <a href="{{ url_for('rent_payments') }}">Manage Rent Payments</a>
+    <a href="{{ url_for('complaints') }}">Log Complaints</a>
+    <a href="{{ url_for('menu') }}">Manage Food Menu</a>
+
     <ul>
         {% for tenant in tenants %}
-            <li>{{ tenant['name'] }} - {{ tenant['room_number'] }}</li>
+            <li>{{ tenant['name'] }} - Room: {{ tenant['room_number'] }}
+                <a href="{{ url_for('edit_tenant', tenant_id=tenant['tenant_id']) }}">Edit</a>
+            </li>
         {% endfor %}
     </ul>
 </body>

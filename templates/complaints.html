@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complaints</title>
+</head>
+<body>
+    <h1>Log Complaints</h1>
+    <form action="{{ url_for('complaints') }}" method="post">
+        <label for="tenant_id">Tenant ID:</label>
+        <input type="text" id="tenant_id" name="tenant_id" required><br><br>
+        <label for="description">Description:</label>
+        <textarea id="description" name="description" required></textarea><br><br>
+        <label for="date">Date:</label>
+        <input type="date" id="date" name="date" required><br><br>
+        <input type="submit" value="Log Complaint">
+    </form>
+    <a href="{{ url_for('index') }}">Back to Tenant List</a>
+
+    <h2>Complaint Records</h2>
+    <ul>
+        {% for complaint in complaints %}
+            <li>Tenant ID: {{ complaint['tenant_id'] }} - Description: {{ complaint['description'] }} - Date: {{ complaint['date'] }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Menu</title>
+</head>
+<body>
+    <h1>Manage Food Menu</h1>
+    <form action="{{ url_for('menu') }}" method="post">
+        <label for="date">Date:</label>
+        <input type="date" id="date" name="date" required><br><br>
+        <label for="meal_type">Meal Type:</label>
+        <input type="text" id="meal_type" name="meal_type" required><br><br>
+        <label for="items">Menu Items:</label>
+        <textarea id="items" name="items" required></textarea><br><br>
+        <input type="submit" value="Update Menu">
+    </form>
+    <a href="{{ url_for('index') }}">Back to Tenant List</a>
+
+    <h2>Menu Records</h2>
+    <ul>
+        {% for item in menu_items %}
+            <li>Date: {{ item['date'] }} - Meal: {{ item['meal_type'] }} - Items: {{ item['items'] }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

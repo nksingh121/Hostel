@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rent Payments</title>
+</head>
+<body>
+    <h1>Manage Rent Payments</h1>
+    <form action="{{ url_for('rent_payments') }}" method="post">
+        <label for="tenant_id">Tenant ID:</label>
+        <input type="text" id="tenant_id" name="tenant_id" required><br><br>
+        <label for="amount">Amount:</label>
+        <input type="text" id="amount" name="amount" required><br><br>
+        <label for="payment_method">Payment Method:</label>
+        <input type="text" id="payment_method" name="payment_method" required><br><br>
+        <label for="date">Date:</label>
+        <input type="date" id="date" name="date" required><br><br>
+        <input type="submit" value="Add Payment">
+    </form>
+    <a href="{{ url_for('index') }}">Back to Tenant List</a>
+
+    <h2>Payment Records</h2>
+    <ul>
+        {% for payment in payments %}
+            <li>Tenant
