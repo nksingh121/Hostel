@@ -1,0 +1,42 @@
+
+/* 2. **Create a CSS File:**
+Inside the `css` folder, create a file named `styles.css`. This file will contain all your custom styles.
+
+### Step 2: Add Custom CSS to `styles.css`
+
+Add some custom styles to the `styles.css` file. Here’s an example to start:
+
+```css */
+/* styles.css */
+
+/* General body styling */
+body {
+ font-family: Arial, sans-serif;
+ background-color: #f8f9fa;
+ padding-top: 20px;
+}
+
+/* Custom styles for the navbar */
+.navbar {
+ margin-bottom: 20px;
+}
+
+/* Form styling */
+form {
+ margin-bottom: 20px;
+}
+
+.form-group {
+ margin-bottom: 15px;
+}
+
+/* Table styling */
+.table-striped {
+ margin-top: 20px;
+}
+
+/* Button styling */
+.btn {
+ margin-top: 10px;
+ margin-bottom: 10px;
+}

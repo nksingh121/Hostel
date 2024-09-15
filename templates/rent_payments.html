@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Rent Payments{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Manage Rent Payments</h1>
+<form action="{{ url_for('rent_payments') }}" method="post" class="needs-validation" novalidate>
+    <div class="form-group">
+        <label for="tenant_id">Tenant ID:</label>
+        <input type="text" id="tenant_id" name="tenant_id" class="form-control" required>
+    </div>
+    <div class="form-group">
+        <label for="amount">Amount:</label>
+        <input type="text" id="amount" name="amount" class="form-control" required>
+    </div>
+    <div class="form-group">
+        <label for="payment_method">Payment Method:</label>
+        <input type="text" id="payment_method" name="payment_method" class="form-control" required>
+    </div>
+    <div class="form-group">
+        <label for="date">Date:</label>
+        <input type="date" id="date" name="date" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-success">Add Payment</button>
+</form>
+
+<h2 class="mt-4">Payment Records</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Tenant ID</th>
+            <th>Amount</th>
+            <th>Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for payment in payments %}
+        <tr>
+            <td>{{ payment['tenant_id'] }}</td>
+            <td>{{ payment['amount'] }}</td>
+            <td>{{ payment['date'] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
