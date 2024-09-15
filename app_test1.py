@@ -57,6 +57,8 @@ def add_tenant():
     if 'username' not in session or session['role'] != 'Admin':
         return redirect(url_for('login'))
     
+    conn = get_db_connection()
+
     if request.method == 'POST':
         name = request.form['name']
         email = request.form['email']
@@ -64,15 +66,30 @@ def add_tenant():
         room_number = request.form['room_number']
         join_date = request.form['join_date']
 
-        conn = get_db_connection()
+        # Server-side validation
+        if not name or not email or not phone or not room_number or not join_date:
+            flash('All fields are required!', 'danger')
+            available_rooms = conn.execute('SELECT * FROM Rooms WHERE status = "available"').fetchall()
+            return render_template('add_tenant.html', available_rooms=available_rooms)
+
+        # Insert new tenant into the database
         conn.execute('INSERT INTO Tenants (name, email, phone, room_number, join_date) VALUES (?, ?, ?, ?, ?)',
                      (name, email, phone, room_number, join_date))
+
+        # Update the room status to 'occupied'
+        conn.execute('UPDATE Rooms SET status = "occupied" WHERE room_number = ?', (room_number,))
         conn.commit()
         conn.close()
+
         flash('Tenant added successfully!', 'success')
         return redirect(url_for('index'))
 
-    return render_template('add_tenant.html')
+    # Fetch available rooms
+    available_rooms = conn.execute('SELECT * FROM Rooms WHERE status = "available"').fetchall()
+    conn.close()
+    return render_template('add_tenant.html', available_rooms=available_rooms)
+
+
 
 # Admin: Edit tenant details
 @app.route('/edit_tenant/<int:tenant_id>', methods=('GET', 'POST'))
@@ -87,18 +104,38 @@ def edit_tenant(tenant_id):
         name = request.form['name']
         email = request.form['email']
         phone = request.form['phone']
-        room_number = request.form['room_number']
-        status = request.form['status']
+        new_room_number = request.form['room_number']
+        join_date = request.form['join_date']
+        old_room_number = tenant['room_number']  # Get the previously assigned room number
 
-        conn.execute('UPDATE Tenants SET name = ?, email = ?, phone = ?, room_number = ?, status = ? WHERE tenant_id = ?',
-                     (name, email, phone, room_number, status, tenant_id))
+        # Server-side validation
+        if not name or not email or not phone or not new_room_number or not join_date:
+            flash('All fields are required!', 'danger')
+            available_rooms = conn.execute('SELECT * FROM Rooms WHERE status = "available"').fetchall()
+            return render_template('edit_tenant.html', tenant=tenant, available_rooms=available_rooms)
+
+        # Update tenant details in the database
+        conn.execute('UPDATE Tenants SET name = ?, email = ?, phone = ?, room_number = ?, join_date = ? WHERE tenant_id = ?',
+                     (name, email, phone, new_room_number, join_date, tenant_id))
+
+        # Update room status if room number has changed
+        if new_room_number != old_room_number:
+            # Set the new room to 'occupied'
+            conn.execute('UPDATE Rooms SET status = "occupied" WHERE room_number = ?', (new_room_number,))
+            # Set the old room to 'available'
+            conn.execute('UPDATE Rooms SET status = "available" WHERE room_number = ?', (old_room_number,))
+        
         conn.commit()
         conn.close()
+
         flash('Tenant details updated successfully!', 'success')
         return redirect(url_for('index'))
 
+    # Fetch available rooms excluding the current room number
+    available_rooms = conn.execute('SELECT * FROM Rooms WHERE status = "available" OR room_number = ?', (tenant['room_number'],)).fetchall()
     conn.close()
-    return render_template('edit_tenant.html', tenant=tenant)
+    return render_template('edit_tenant.html', tenant=tenant, available_rooms=available_rooms)
+
 
 # Admin: Manage rent payments
 @app.route('/rent_payments', methods=('GET', 'POST'))
@@ -180,14 +217,22 @@ def delete_tenant(tenant_id):
 
     conn = get_db_connection()
     
-    # Fetch the tenant's email to remove them from the Users table
+    # Fetch the tenant's details including their room number and email
     tenant = conn.execute('SELECT * FROM Tenants WHERE tenant_id = ?', (tenant_id,)).fetchone()
     
     if tenant:
+        room_number = tenant['room_number']  # Get the room number of the tenant
+        email = tenant['email']  # Get the email of the tenant
+
         # Remove tenant from the Tenants table
         conn.execute('DELETE FROM Tenants WHERE tenant_id = ?', (tenant_id,))
+        
         # Remove user from the Users table using tenant's email as username
-        conn.execute('DELETE FROM Users WHERE username = ?', (tenant['email'],))
+        conn.execute('DELETE FROM Users WHERE username = ?', (email,))
+
+        # Update the room status to 'available'
+        conn.execute('UPDATE Rooms SET status = "available" WHERE room_number = ?', (room_number,))
+        
         conn.commit()
         flash('Tenant and associated user account removed successfully!', 'success')
     else:
@@ -195,6 +240,7 @@ def delete_tenant(tenant_id):
 
     conn.close()
     return redirect(url_for('index'))
+
 
 
 # Tenant: View profile and rent history
