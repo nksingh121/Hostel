@@ -1,29 +1,42 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Complaints</title>
-</head>
-<body>
-    <h1>Log Complaints</h1>
-    <form action="{{ url_for('complaints') }}" method="post">
-        <label for="tenant_id">Tenant ID:</label>
-        <input type="text" id="tenant_id" name="tenant_id" required><br><br>
-        <label for="description">Description:</label>
-        <textarea id="description" name="description" required></textarea><br><br>
-        <label for="date">Date:</label>
-        <input type="date" id="date" name="date" required><br><br>
-        <input type="submit" value="Log Complaint">
-    </form>
-    <a href="{{ url_for('index') }}">Back to Tenant List</a>
+{% extends 'base.html' %}
 
-    <h2>Complaint Records</h2>
-    <ul>
+{% block title %}Complaints{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Log Complaints</h1>
+<form action="{{ url_for('complaints') }}" method="post" class="needs-validation" novalidate>
+    <div class="form-group">
+        <label for="tenant_id">Tenant ID:</label>
+        <input type="text" id="tenant_id" name="tenant_id" class="form-control" required>
+    </div>
+    <div class="form-group">
+        <label for="description">Description:</label>
+        <textarea id="description" name="description" class="form-control" required></textarea>
+    </div>
+    <div class="form-group">
+        <label for="date">Date:</label>
+        <input type="date" id="date" name="date" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-danger">Log Complaint</button>
+</form>
+
+<h2 class="mt-4">Complaint Records</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Tenant ID</th>
+            <th>Description</th>
+            <th>Date</th>
+        </tr>
+    </thead>
+    <tbody>
         {% for complaint in complaints %}
-            <li>Tenant ID: {{ complaint['tenant_id'] }} - Description: {{ complaint['description'] }} - Date: {{ complaint['date'] }}</li>
+        <tr>
+            <td>{{ complaint['tenant_id'] }}</td>
+            <td>{{ complaint['description'] }}</td>
+            <td>{{ complaint['date'] }}</td>
+        </tr>
         {% endfor %}
-    </ul>
-</body>
-</html>
+    </tbody>
+</table>
+{% endblock %}

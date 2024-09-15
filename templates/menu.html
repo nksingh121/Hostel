@@ -1,29 +1,42 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Food Menu</title>
-</head>
-<body>
-    <h1>Manage Food Menu</h1>
-    <form action="{{ url_for('menu') }}" method="post">
-        <label for="date">Date:</label>
-        <input type="date" id="date" name="date" required><br><br>
-        <label for="meal_type">Meal Type:</label>
-        <input type="text" id="meal_type" name="meal_type" required><br><br>
-        <label for="items">Menu Items:</label>
-        <textarea id="items" name="items" required></textarea><br><br>
-        <input type="submit" value="Update Menu">
-    </form>
-    <a href="{{ url_for('index') }}">Back to Tenant List</a>
+{% extends 'base.html' %}
 
-    <h2>Menu Records</h2>
-    <ul>
+{% block title %}Food Menu{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Manage Food Menu</h1>
+<form action="{{ url_for('menu') }}" method="post" class="needs-validation" novalidate>
+    <div class="form-group">
+        <label for="date">Date:</label>
+        <input type="date" id="date" name="date" class="form-control" required>
+    </div>
+    <div class="form-group">
+        <label for="meal_type">Meal Type:</label>
+        <input type="text" id="meal_type" name="meal_type" class="form-control" required>
+    </div>
+    <div class="form-group">
+        <label for="items">Menu Items:</label>
+        <textarea id="items" name="items" class="form-control" required></textarea>
+    </div>
+    <button type="submit" class="btn btn-info">Update Menu</button>
+</form>
+
+<h2 class="mt-4">Menu Records</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Meal Type</th>
+            <th>Items</th>
+        </tr>
+    </thead>
+    <tbody>
         {% for item in menu_items %}
-            <li>Date: {{ item['date'] }} - Meal: {{ item['meal_type'] }} - Items: {{ item['items'] }}</li>
+        <tr>
+            <td>{{ item['date'] }}</td>
+            <td>{{ item['meal_type'] }}</td>
+            <td>{{ item['items'] }}</td>
+        </tr>
         {% endfor %}
-    </ul>
-</body>
-</html>
+    </tbody>
+</table>
+{% endblock %}

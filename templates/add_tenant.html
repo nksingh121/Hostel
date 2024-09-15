@@ -1,27 +1,30 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add New Tenant</title>
-</head>
-<body>
-    <h1>Add New Tenant</h1>
-    <form action="{{ url_for('add_tenant') }}" method="post">
+{% extends 'base.html' %}
+
+{% block title %}Add Tenant{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Add New Tenant</h1>
+<form action="{{ url_for('add_tenant') }}" method="post" class="needs-validation" novalidate>
+    <div class="form-group">
         <label for="name">Name:</label>
-        <input type="text" id="name" name="name" required><br><br>
+        <input type="text" id="name" name="name" class="form-control" required>
+    </div>
+    <div class="form-group">
         <label for="email">Email:</label>
-        <input type="email" id="email" name="email" required><br><br>
+        <input type="email" id="email" name="email" class="form-control" required>
+    </div>
+    <div class="form-group">
         <label for="phone">Phone:</label>
-        <input type="text" id="phone" name="phone" required><br><br>
+        <input type="text" id="phone" name="phone" class="form-control" required>
+    </div>
+    <div class="form-group">
         <label for="room_number">Room Number:</label>
-        <input type="text" id="room_number" name="room_number" required><br><br>
+        <input type="text" id="room_number" name="room_number" class="form-control" required>
+    </div>
+    <div class="form-group">
         <label for="join_date">Join Date:</label>
-        <input type="date" id="join_date" name="join_date" required><br><br>
-        <input type="submit" value="Add Tenant">
-    </form>
-    <br>
-    <a href="{{ url_for('index') }}">Back to Tenant List</a>
-</body>
-</html>
+        <input type="date" id="join_date" name="join_date" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-success">Add Tenant</button>
+</form>
+{% endblock %}
