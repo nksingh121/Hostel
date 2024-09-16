@@ -433,9 +433,16 @@ def log_complaint():
     # Fetch all complaints for the logged-in tenant
     tenant_id = session['tenant_id']
     complaints = conn.execute('SELECT * FROM Complaints WHERE tenant_id = ? ORDER BY date DESC', (tenant_id,)).fetchall()
-    conn.close()
 
+    # Check if there is a message for the tenant from the admin's action
+    if 'tenant_message' in session:
+        flash(session['tenant_message'], 'info')
+        session.pop('tenant_message')  # Remove the message from the session after displaying it
+
+    conn.close()
     return render_template('/tenants/log_complaint.html', complaints=complaints)
+
+
 
 # Tenant: Request an edit for a complaint
 @app.route('/request_edit_complaint/<int:complaint_id>', methods=['POST'])
@@ -499,22 +506,32 @@ def handle_edit_request(complaint_id):
         return redirect(url_for('login'))
 
     action = request.form['action']
-
     conn = get_db_connection()
 
     if action == 'approve':
         # Allow the tenant to edit the complaint
         conn.execute('UPDATE Complaints SET status = ? WHERE complaint_id = ?', ('Approved for Edit', complaint_id))
         flash('Edit request approved. Tenant can now edit the complaint.', 'success')
+
+        # Get the tenant ID associated with this complaint
+        tenant_id = conn.execute('SELECT tenant_id FROM Complaints WHERE complaint_id = ?', (complaint_id,)).fetchone()['tenant_id']
+        # Set a flag in the session to show a message to the tenant
+        session['tenant_message'] = f"Your edit request for complaint {complaint_id} was approved. You can now edit your complaint."
+
     elif action == 'reject':
         # Reject the edit request
         conn.execute('UPDATE Complaints SET status = ? WHERE complaint_id = ?', ('Open', complaint_id))
-        # Send a flash message to the tenant
         flash('Edit request rejected.', 'danger')
+
+        # Get the tenant ID associated with this complaint
+        tenant_id = conn.execute('SELECT tenant_id FROM Complaints WHERE complaint_id = ?', (complaint_id,)).fetchone()['tenant_id']
+        # Set a flag in the session to show a message to the tenant
+        session['tenant_message'] = f"Your edit request for complaint {complaint_id} was declined."
 
     conn.commit()
     conn.close()
     return redirect(url_for('view_complaints'))
+
 
 
 
@@ -608,13 +625,16 @@ def login():
                 if tenant:
                     session['tenant_id'] = tenant['tenant_id']
             
-            # Redirect based on role
-            flash('Login successful!', 'success')
+            # Flash a login success message only if the query parameter 'show_login_message' is set
+            if request.args.get('show_login_message') == 'true':
+                flash('Login successful!', 'success')
+                
             return redirect(url_for('index'))
         else:
             flash('Invalid username or password', 'danger')
 
     return render_template('login.html')
+
 
 
 # User Logout
