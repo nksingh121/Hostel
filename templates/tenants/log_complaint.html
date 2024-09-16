@@ -1,36 +1,78 @@
 {% extends 'base.html' %}
 
-{% block title %}Log Complaint{% endblock %}
+{% block title %}My Complaints{% endblock %}
 
 {% block content %}
-<h1 class="mb-4">Log a Complaint</h1>
-<form action="{{ url_for('log_complaint') }}" method="post" class="needs-validation" novalidate>
+<h1 class="mb-4">My Complaints</h1>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<!-- New Complaint Form -->
+<h2 class="mb-3">Log a New Complaint</h2>
+<form method="POST" action="{{ url_for('log_complaint') }}" onsubmit="return confirmComplaintSubmission();" class="mb-4">
     <div class="form-group">
-        <label for="description">Description:</label>
+        <label for="description">Complaint Description:</label>
         <textarea id="description" name="description" class="form-control" required></textarea>
     </div>
-    <div class="form-group">
-        <label for="date">Date:</label>
-        <input type="date" id="date" name="date" class="form-control" required>
-    </div>
-    <button type="submit" class="btn btn-danger">Log Complaint</button>
+    <button type="submit" class="btn btn-primary">Submit Complaint</button>
 </form>
 
-<h2 class="mt-4">Your Complaints</h2>
+<!-- JavaScript for Confirmation Dialog -->
+<script>
+function confirmComplaintSubmission() {
+    return confirm("Are you sure you want to submit this complaint?");
+}
+</script>
+
+<!-- Complaints Table -->
+<h2 class="mb-3">My Complaints</h2>
 <table class="table table-striped">
     <thead>
         <tr>
-            <th>Description</th>
+            <th>Complaint</th>
             <th>Date</th>
             <th>Status</th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
         {% for complaint in complaints %}
         <tr>
-            <td>{{ complaint['description'] }}</td>
+            <td>
+                {% if complaint['status'] == 'Approved for Edit' %}
+                <!-- Editable Textarea for Approved Complaints -->
+                <form method="POST" action="{{ url_for('edit_complaint', complaint_id=complaint['complaint_id']) }}">
+                    <textarea name="description" class="form-control">{{ complaint['description'] }}</textarea>
+                    <button type="submit" class="btn btn-success btn-sm mt-2">Save Changes</button>
+                </form>
+                {% else %}
+                {{ complaint['description'] }}
+                {% endif %}
+            </td>
             <td>{{ complaint['date'] }}</td>
             <td>{{ complaint['status'] }}</td>
+            <td>
+                {% if complaint['status'] == 'Open' %}
+                <!-- Corrected Edit Request Button -->
+                <form method="POST" action="{{ url_for('request_edit_complaint', complaint_id=complaint['complaint_id']) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-warning btn-sm">Request Edit</button>
+                </form>
+                {% else %}
+                No actions available
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </tbody>

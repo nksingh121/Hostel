@@ -21,7 +21,7 @@
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Home</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('add_tenant') }}">Add Tenant</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('rent_payments') }}">Manage Rent Payments</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('complaints') }}">Log Complaints</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('view_complaints') }}">Log Complaints</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('menu') }}">Manage Food Menu</a></li>
             </ul>
         </div>
@@ -34,7 +34,7 @@
                     {% if session['role'] == 'Admin' %}
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('add_tenant') }}">Add Tenant</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('rent_payments') }}">Manage Rent Payments</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('complaints') }}">Log Complaints</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('view_complaints') }}">View Complaints</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('menu') }}">Manage Food Menu</a></li>
                     {% elif session['role'] == 'Tenant' %}
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('tenant_profile') }}">Profile</a></li>
