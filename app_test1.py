@@ -6,6 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import re
 import requests
+from menu_data import weekly_menu  # Import the weekly_menu from menu_data.py
 
 # Load environment variables from .env file
 load_dotenv()
@@ -341,29 +342,6 @@ def delete_complaint(complaint_id):
 
 
 
-# Admin: Manage food menu
-@app.route('/menu', methods=('GET', 'POST'))
-def menu():
-    if 'username' not in session or session['role'] != 'Admin':
-        return redirect(url_for('login'))
-    
-    conn = get_db_connection()
-    menu_items = conn.execute('SELECT * FROM Menu').fetchall()
-
-    if request.method == 'POST':
-        date = request.form['date']
-        meal_type = request.form['meal_type']
-        items = request.form['items']
-
-        conn.execute('INSERT INTO Menu (date, meal_type, items) VALUES (?, ?, ?)', (date, meal_type, items))
-        conn.commit()
-        conn.close()
-        flash('Menu updated successfully!', 'success')
-        return redirect(url_for('menu'))
-
-    conn.close()
-    return render_template('menu.html', menu_items=menu_items)
-
 # Admin: Remove a tenant
 @app.route('/delete_tenant/<int:tenant_id>', methods=['POST'])
 def delete_tenant(tenant_id):
@@ -546,6 +524,84 @@ def food_menu():
     menu_items = conn.execute('SELECT * FROM Menu ORDER BY date DESC').fetchall()
     conn.close()
     return render_template('tenants/food_menu.html', menu_items=menu_items)
+#-----------------------------------------------------------------x-------------------------------------------------------#
+# # Admin: Manage food menu
+# @app.route('/menu', methods=('GET', 'POST'))
+# def menu():
+#     if 'username' not in session or session['role'] != 'Admin':
+#         return redirect(url_for('login'))
+    
+#     conn = get_db_connection()
+#     menu_items = conn.execute('SELECT * FROM Menu').fetchall()
+
+#     if request.method == 'POST':
+#         date = request.form['date']
+#         meal_type = request.form['meal_type']
+#         items = request.form['items']
+
+#         conn.execute('INSERT INTO Menu (date, meal_type, items) VALUES (?, ?, ?)', (date, meal_type, items))
+#         conn.commit()
+#         conn.close()
+#         flash('Menu updated successfully!', 'success')
+#         return redirect(url_for('menu'))
+
+#     conn.close()
+#     return render_template('menu.html', menu_items=menu_items)
+
+#---------------------------------------------------------------x--------------------------------------------#
+
+# Define the weekly food menu
+# weekly_menu = {
+#     'Monday': ['Rice', 'Chicken Curry', 'Salad'],
+#     'Tuesday': ['Chapati', 'Paneer Butter Masala', 'Dal'],
+#     'Wednesday': ['Pasta', 'Garlic Bread', 'Soup'],
+#     'Thursday': ['Biryani', 'Raita', 'Papad'],
+#     'Friday': ['Pizza', 'French Fries', 'Coleslaw'],
+#     'Saturday': ['Noodles', 'Spring Rolls', 'Manchurian'],
+#     'Sunday': ['Idli', 'Sambar', 'Chutney']
+# }
+
+# Route for the tenant menu
+@app.route('/tenant_menu')
+def tenant_menu():
+    return render_template('/tenants/tenant_menu.html', menus=weekly_menu)
+
+# Route for the admin menu
+@app.route('/admin_menu')
+def admin_menu():
+    return render_template('admin_menu.html', menus=weekly_menu)
+
+# Route for editing a specific day's menu (Admin only)
+@app.route('/edit_menu/<day>', methods=['GET', 'POST'])
+def edit_menu(day):
+    if 'username' not in session or session['role'] != 'Admin':
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        # Get the updated meal items, split by commas
+        breakfast_menu = request.form['breakfast_items'].split(',')
+        lunch_menu = request.form['lunch_items'].split(',')
+        dinner_menu = request.form['dinner_items'].split(',')
+        
+        # Strip leading/trailing spaces from each item
+        breakfast_menu = [item.strip() for item in breakfast_menu]
+        lunch_menu = [item.strip() for item in lunch_menu]
+        dinner_menu = [item.strip() for item in dinner_menu]
+        
+        # Update the weekly menu for the selected day
+        weekly_menu[day] = {
+            'Breakfast': breakfast_menu,
+            'Lunch': lunch_menu,
+            'Dinner': dinner_menu
+        }
+        
+        flash(f'Menu for {day} updated successfully!', 'success')
+        return redirect(url_for('admin_menu'))
+
+    return render_template('edit_menu.html', day=day, menu=weekly_menu[day])
+
+
+
 
 # User Registration
 @app.route('/register', methods=('GET', 'POST'))
