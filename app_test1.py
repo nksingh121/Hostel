@@ -6,6 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import re
 import requests
+from menu_data import weekly_menu  # Import the weekly_menu from menu_data.py
 
 # Load environment variables from .env file
 load_dotenv()
@@ -144,7 +145,43 @@ def rent_payments():
         return redirect(url_for('login'))
     
     conn = get_db_connection()
-    payments = conn.execute('SELECT * FROM Payments').fetchall()
+
+    # Retrieve filter/search parameters
+    tenant_id = request.args.get('tenant_id', '')
+    start_date = request.args.get('start_date', '')
+    end_date = request.args.get('end_date', '')
+    status = request.args.get('status', '')
+    payment_method = request.args.get('payment_method', '')
+
+    # Build the SQL query with filters
+    query = '''
+    SELECT Payments.*, Tenants.name as tenant_name, Tenants.room_number 
+    FROM Payments 
+    INNER JOIN Tenants ON Payments.tenant_id = Tenants.tenant_id 
+    WHERE 1=1
+    '''
+    params = []
+
+    if tenant_id:
+        query += ' AND Tenants.tenant_id = ?'
+        params.append(tenant_id)
+    if start_date:
+        query += ' AND Payments.date >= ?'
+        params.append(start_date)
+    if end_date:
+        query += ' AND Payments.date <= ?'
+        params.append(end_date)
+    if status:
+        query += ' AND Payments.status = ?'
+        params.append(status)
+    if payment_method:
+        query += ' AND Payments.payment_method = ?'
+        params.append(payment_method)
+
+    payments = conn.execute(query, params).fetchall()
+
+    # Fetch tenant information for dropdowns
+    tenants = conn.execute('SELECT tenant_id, name, room_number FROM Tenants').fetchall()
 
     if request.method == 'POST':
         tenant_id = request.form['tenant_id']
@@ -152,6 +189,12 @@ def rent_payments():
         payment_method = request.form['payment_method']
         date = request.form['date']
 
+        # Server-side validation
+        if not tenant_id or not amount or not payment_method or not date:
+            flash('All fields are required!', 'danger')
+            return render_template('rent_payments.html', payments=payments, tenants=tenants)
+
+        # Insert new payment into the database
         conn.execute('INSERT INTO Payments (tenant_id, amount, date, status, payment_method) VALUES (?, ?, ?, ?, ?)',
                      (tenant_id, amount, date, 'Paid', payment_method))
         conn.commit()
@@ -160,54 +203,144 @@ def rent_payments():
         return redirect(url_for('rent_payments'))
 
     conn.close()
-    return render_template('rent_payments.html', payments=payments)
+    return render_template('rent_payments.html', payments=payments, tenants=tenants)
 
-# Admin: Log complaints
-@app.route('/complaints', methods=('GET', 'POST'))
-def complaints():
+
+# Admin: Delete a payment
+@app.route('/delete_payment/<int:payment_id>', methods=['POST'])
+def delete_payment(payment_id):
     if 'username' not in session or session['role'] != 'Admin':
         return redirect(url_for('login'))
-    
+
     conn = get_db_connection()
-    complaints = conn.execute('SELECT * FROM Complaints').fetchall()
 
-    if request.method == 'POST':
-        tenant_id = request.form['tenant_id']
-        description = request.form['description']
-        date = request.form['date']
+    # Check if the payment exists
+    payment = conn.execute('SELECT * FROM Payments WHERE payment_id = ?', (payment_id,)).fetchone()
 
-        conn.execute('INSERT INTO Complaints (tenant_id, description, date, status) VALUES (?, ?, ?, ?)',
-                     (tenant_id, description, date, 'Open'))
+    if payment:
+        # Delete the payment
+        conn.execute('DELETE FROM Payments WHERE payment_id = ?', (payment_id,))
         conn.commit()
-        conn.close()
-        flash('Complaint logged successfully!', 'success')
-        return redirect(url_for('complaints'))
+        flash('Payment deleted successfully!', 'success')
+    else:
+        flash('Payment not found!', 'danger')
 
     conn.close()
-    return render_template('complaints.html', complaints=complaints)
+    return redirect(url_for('rent_payments'))
 
-# Admin: Manage food menu
-@app.route('/menu', methods=('GET', 'POST'))
-def menu():
+
+
+# Admin: Edit payment details
+@app.route('/edit_payment/<int:payment_id>', methods=('GET', 'POST'))
+def edit_payment(payment_id):
     if 'username' not in session or session['role'] != 'Admin':
         return redirect(url_for('login'))
-    
+
     conn = get_db_connection()
-    menu_items = conn.execute('SELECT * FROM Menu').fetchall()
+    payment = conn.execute('SELECT * FROM Payments WHERE payment_id = ?', (payment_id,)).fetchone()
 
     if request.method == 'POST':
+        amount = request.form['amount']
+        payment_method = request.form['payment_method']
         date = request.form['date']
-        meal_type = request.form['meal_type']
-        items = request.form['items']
+        status = request.form['status']
 
-        conn.execute('INSERT INTO Menu (date, meal_type, items) VALUES (?, ?, ?)', (date, meal_type, items))
+        # Server-side validation
+        if not amount or not payment_method or not date or not status:
+            flash('All fields are required!', 'danger')
+            return render_template('edit_payment.html', payment=payment)
+
+        # Update payment details in the database
+        conn.execute('UPDATE Payments SET amount = ?, date = ?, status = ?, payment_method = ? WHERE payment_id = ?',
+                     (amount, date, status, payment_method, payment_id))
         conn.commit()
         conn.close()
-        flash('Menu updated successfully!', 'success')
-        return redirect(url_for('menu'))
+
+        flash('Payment details updated successfully!', 'success')
+        return redirect(url_for('rent_payments'))
 
     conn.close()
-    return render_template('menu.html', menu_items=menu_items)
+    return render_template('edit_payment.html', payment=payment)
+
+
+
+# Admin: View and manage complaints
+@app.route('/view_complaints', methods=('GET', 'POST'))
+def view_complaints():
+    if 'username' not in session or session['role'] != 'Admin':
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+
+    # Retrieve filter parameters
+    tenant_id = request.args.get('tenant_id', '')
+    start_date = request.args.get('start_date', '')
+    end_date = request.args.get('end_date', '')
+    status = request.args.get('status', '')
+
+    # Build the SQL query with filters
+    query = '''
+    SELECT Complaints.*, Tenants.name as tenant_name, Tenants.room_number 
+    FROM Complaints 
+    INNER JOIN Tenants ON Complaints.tenant_id = Tenants.tenant_id 
+    WHERE 1=1
+    '''
+    params = []
+
+    if tenant_id:
+        query += ' AND Tenants.tenant_id = ?'
+        params.append(tenant_id)
+    if start_date:
+        query += ' AND Complaints.date >= ?'
+        params.append(start_date)
+    if end_date:
+        query += ' AND Complaints.date <= ?'
+        params.append(end_date)
+    if status:
+        query += ' AND Complaints.status = ?'
+        params.append(status)
+
+    complaints = conn.execute(query, params).fetchall()
+
+    # Fetch tenant information for dropdowns
+    tenants = conn.execute('SELECT tenant_id, name, room_number FROM Tenants').fetchall()
+
+    conn.close()
+    return render_template('view_complaints.html', complaints=complaints, tenants=tenants)
+
+# Admin: Update complaint status
+@app.route('/update_complaint_status/<int:complaint_id>', methods=['POST'])
+def update_complaint_status(complaint_id):
+    if 'username' not in session or session['role'] != 'Admin':
+        return redirect(url_for('login'))
+
+    new_status = request.form['status']
+
+    conn = get_db_connection()
+    conn.execute('UPDATE Complaints SET status = ? WHERE complaint_id = ?', (new_status, complaint_id))
+    conn.commit()
+    conn.close()
+
+    flash('Complaint status updated successfully!', 'success')
+    return redirect(url_for('view_complaints'))
+
+# Admin: Delete a complaint
+@app.route('/delete_complaint/<int:complaint_id>', methods=['POST'])
+def delete_complaint(complaint_id):
+    if 'username' not in session or session['role'] != 'Admin':
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+
+    # Execute deletion query
+    conn.execute('DELETE FROM Complaints WHERE complaint_id = ?', (complaint_id,))
+    conn.commit()
+    conn.close()
+
+    flash('Complaint deleted successfully!', 'success')
+    return redirect(url_for('view_complaints'))
+
+
 
 # Admin: Remove a tenant
 @app.route('/delete_tenant/<int:tenant_id>', methods=['POST'])
@@ -256,29 +389,130 @@ def tenant_profile():
     conn.close()
     return render_template('tenants/tenant_profile.html', tenant=tenant, rent_history=rent_history)
 
-# Tenant: Log a complaint
-@app.route('/log_complaint', methods=('GET', 'POST'))
+# Tenant: Log a new complaint and view complaint history
+@app.route('/log_complaint', methods=['GET', 'POST'])
 def log_complaint():
     if 'username' not in session or session['role'] != 'Tenant':
         return redirect(url_for('login'))
-    
+
     conn = get_db_connection()
-    tenant = conn.execute('SELECT * FROM Tenants WHERE email = ?', (session['username'],)).fetchone()
 
     if request.method == 'POST':
+        tenant_id = session['tenant_id']
         description = request.form['description']
-        date = request.form['date']
 
-        conn.execute('INSERT INTO Complaints (tenant_id, description, date, status) VALUES (?, ?, ?, ?)',
-                     (tenant['tenant_id'], description, date, 'Open'))
+        # Insert the new complaint into the database
+        conn.execute('INSERT INTO Complaints (tenant_id, description, date, status) VALUES (?, ?, DATE("now"), ?)',
+                     (tenant_id, description, 'Open'))
         conn.commit()
-        conn.close()
-        flash('Complaint logged successfully!', 'success')
+        flash('Complaint submitted successfully!', 'success')
         return redirect(url_for('log_complaint'))
 
-    complaints = conn.execute('SELECT * FROM Complaints WHERE tenant_id = ?', (tenant['tenant_id'],)).fetchall()
+    # Fetch all complaints for the logged-in tenant
+    tenant_id = session['tenant_id']
+    complaints = conn.execute('SELECT * FROM Complaints WHERE tenant_id = ? ORDER BY date DESC', (tenant_id,)).fetchall()
+
+    # Check if there is a message for the tenant from the admin's action
+    if 'tenant_message' in session:
+        flash(session['tenant_message'], 'info')
+        session.pop('tenant_message')  # Remove the message from the session after displaying it
+
     conn.close()
-    return render_template('tenants/log_complaint.html', complaints=complaints)
+    return render_template('/tenants/log_complaint.html', complaints=complaints)
+
+
+
+# Tenant: Request an edit for a complaint
+@app.route('/request_edit_complaint/<int:complaint_id>', methods=['POST'])
+def request_edit_complaint(complaint_id):
+    if 'username' not in session or session['role'] != 'Tenant':
+        return redirect(url_for('login'))
+
+    tenant_id = session['tenant_id']
+
+    # Check if the complaint belongs to the tenant
+    conn = get_db_connection()
+    complaint = conn.execute('SELECT * FROM Complaints WHERE complaint_id = ? AND tenant_id = ?', (complaint_id, tenant_id)).fetchone()
+
+    if complaint:
+        # Update the status to 'Edit Requested'
+        conn.execute('UPDATE Complaints SET status = ? WHERE complaint_id = ?', ('Edit Requested', complaint_id))
+        conn.commit()
+        conn.close()
+        flash('Edit request sent to the admin.', 'success')
+    else:
+        conn.close()
+        flash('Complaint not found or does not belong to you.', 'danger')
+
+    return redirect(url_for('log_complaint'))
+
+
+# Tenant: Edit an approved complaint
+@app.route('/edit_complaint/<int:complaint_id>', methods=['POST'])
+def edit_complaint(complaint_id):
+    if 'username' not in session or session['role'] != 'Tenant':
+        return redirect(url_for('login'))
+
+    tenant_id = session['tenant_id']
+    description = request.form['description']
+
+    conn = get_db_connection()
+
+    # Ensure the complaint belongs to the tenant and is approved for editing
+    complaint = conn.execute('SELECT * FROM Complaints WHERE complaint_id = ? AND tenant_id = ? AND status = ?', 
+                             (complaint_id, tenant_id, 'Approved for Edit')).fetchone()
+
+    if complaint:
+        # Update the complaint description
+        conn.execute('UPDATE Complaints SET description = ?, status = ? WHERE complaint_id = ?', 
+                     (description, 'Open', complaint_id))
+        conn.commit()
+        flash('Complaint updated successfully!', 'success')
+    else:
+        flash('Complaint not found or not authorized to edit.', 'danger')
+
+    conn.close()
+    return redirect(url_for('log_complaint'))
+
+
+
+
+# Admin: Approve or reject edit requests
+@app.route('/admin/complaints/handle_edit_request/<int:complaint_id>', methods=['POST'])
+def handle_edit_request(complaint_id):
+    if 'username' not in session or session['role'] != 'Admin':
+        return redirect(url_for('login'))
+
+    action = request.form['action']
+    conn = get_db_connection()
+
+    if action == 'approve':
+        # Allow the tenant to edit the complaint
+        conn.execute('UPDATE Complaints SET status = ? WHERE complaint_id = ?', ('Approved for Edit', complaint_id))
+        flash('Edit request approved. Tenant can now edit the complaint.', 'success')
+
+        # Get the tenant ID associated with this complaint
+        tenant_id = conn.execute('SELECT tenant_id FROM Complaints WHERE complaint_id = ?', (complaint_id,)).fetchone()['tenant_id']
+        # Set a flag in the session to show a message to the tenant
+        session['tenant_message'] = f"Your edit request for complaint {complaint_id} was approved. You can now edit your complaint."
+
+    elif action == 'reject':
+        # Reject the edit request
+        conn.execute('UPDATE Complaints SET status = ? WHERE complaint_id = ?', ('Open', complaint_id))
+        flash('Edit request rejected.', 'danger')
+
+        # Get the tenant ID associated with this complaint
+        tenant_id = conn.execute('SELECT tenant_id FROM Complaints WHERE complaint_id = ?', (complaint_id,)).fetchone()['tenant_id']
+        # Set a flag in the session to show a message to the tenant
+        session['tenant_message'] = f"Your edit request for complaint {complaint_id} was declined."
+
+    conn.commit()
+    conn.close()
+    return redirect(url_for('view_complaints'))
+
+
+
+
 
 # Tenant: View the food menu
 @app.route('/food_menu')
@@ -290,6 +524,84 @@ def food_menu():
     menu_items = conn.execute('SELECT * FROM Menu ORDER BY date DESC').fetchall()
     conn.close()
     return render_template('tenants/food_menu.html', menu_items=menu_items)
+#-----------------------------------------------------------------x-------------------------------------------------------#
+# # Admin: Manage food menu
+# @app.route('/menu', methods=('GET', 'POST'))
+# def menu():
+#     if 'username' not in session or session['role'] != 'Admin':
+#         return redirect(url_for('login'))
+    
+#     conn = get_db_connection()
+#     menu_items = conn.execute('SELECT * FROM Menu').fetchall()
+
+#     if request.method == 'POST':
+#         date = request.form['date']
+#         meal_type = request.form['meal_type']
+#         items = request.form['items']
+
+#         conn.execute('INSERT INTO Menu (date, meal_type, items) VALUES (?, ?, ?)', (date, meal_type, items))
+#         conn.commit()
+#         conn.close()
+#         flash('Menu updated successfully!', 'success')
+#         return redirect(url_for('menu'))
+
+#     conn.close()
+#     return render_template('menu.html', menu_items=menu_items)
+
+#---------------------------------------------------------------x--------------------------------------------#
+
+# Define the weekly food menu
+# weekly_menu = {
+#     'Monday': ['Rice', 'Chicken Curry', 'Salad'],
+#     'Tuesday': ['Chapati', 'Paneer Butter Masala', 'Dal'],
+#     'Wednesday': ['Pasta', 'Garlic Bread', 'Soup'],
+#     'Thursday': ['Biryani', 'Raita', 'Papad'],
+#     'Friday': ['Pizza', 'French Fries', 'Coleslaw'],
+#     'Saturday': ['Noodles', 'Spring Rolls', 'Manchurian'],
+#     'Sunday': ['Idli', 'Sambar', 'Chutney']
+# }
+
+# Route for the tenant menu
+@app.route('/tenant_menu')
+def tenant_menu():
+    return render_template('/tenants/tenant_menu.html', menus=weekly_menu)
+
+# Route for the admin menu
+@app.route('/admin_menu')
+def admin_menu():
+    return render_template('admin_menu.html', menus=weekly_menu)
+
+# Route for editing a specific day's menu (Admin only)
+@app.route('/edit_menu/<day>', methods=['GET', 'POST'])
+def edit_menu(day):
+    if 'username' not in session or session['role'] != 'Admin':
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        # Get the updated meal items, split by commas
+        breakfast_menu = request.form['breakfast_items'].split(',')
+        lunch_menu = request.form['lunch_items'].split(',')
+        dinner_menu = request.form['dinner_items'].split(',')
+        
+        # Strip leading/trailing spaces from each item
+        breakfast_menu = [item.strip() for item in breakfast_menu]
+        lunch_menu = [item.strip() for item in lunch_menu]
+        dinner_menu = [item.strip() for item in dinner_menu]
+        
+        # Update the weekly menu for the selected day
+        weekly_menu[day] = {
+            'Breakfast': breakfast_menu,
+            'Lunch': lunch_menu,
+            'Dinner': dinner_menu
+        }
+        
+        flash(f'Menu for {day} updated successfully!', 'success')
+        return redirect(url_for('admin_menu'))
+
+    return render_template('edit_menu.html', day=day, menu=weekly_menu[day])
+
+
+
 
 # User Registration
 @app.route('/register', methods=('GET', 'POST'))
@@ -344,8 +656,8 @@ def register():
 
 
 
-# User Login
-@app.route('/login', methods=('GET', 'POST'))
+# Tenant and Admin login route
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
@@ -356,14 +668,30 @@ def login():
         conn.close()
 
         if user and check_password_hash(user['password_hash'], password):
-            session['username'] = username
+            # Store common session details for both roles
+            session['username'] = user['username']
             session['role'] = user['role']
-            flash('Login successful!', 'success')
+            
+            if user['role'] == 'Tenant':
+                # Additional step for Tenant: fetch and store tenant_id
+                conn = get_db_connection()
+                tenant = conn.execute('SELECT tenant_id FROM Tenants WHERE email = ?', (username,)).fetchone()
+                conn.close()
+
+                if tenant:
+                    session['tenant_id'] = tenant['tenant_id']
+            
+            # Flash a login success message only if the query parameter 'show_login_message' is set
+            if request.args.get('show_login_message') == 'true':
+                flash('Login successful!', 'success')
+                
             return redirect(url_for('index'))
         else:
-            flash('Invalid username or password. Please try again.', 'danger')
+            flash('Invalid username or password', 'danger')
 
     return render_template('login.html')
+
+
 
 # User Logout
 @app.route('/logout')
