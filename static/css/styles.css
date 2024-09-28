@@ -9,34 +9,81 @@ Add some custom styles to the `styles.css` file. Here’s an example to start:
 ```css */
 /* styles.css */
 
-/* General body styling */
+
+
+/* Global Styling */
 body {
- font-family: Arial, sans-serif;
- background-color: #f8f9fa;
- padding-top: 20px;
+    background-color: #f0f0f5; /* Soft grayish background for elegance */
+    font-family: 'Poppins', sans-serif; /* Example custom font */
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
 }
 
-/* Custom styles for the navbar */
+.container {
+    background-color: white; /* White background for content */
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    max-width: 1200px;
+    margin: 40px auto; /* Center the container with auto margins */
+}
+
+/* Navbar Customization */
 .navbar {
- margin-bottom: 20px;
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Form styling */
-form {
- margin-bottom: 20px;
+.navbar-brand, .navbar-nav .nav-link {
+    color: var(--text-color);
+    transition: color 0.3s;
 }
 
-.form-group {
- margin-bottom: 15px;
+.navbar-nav .nav-link:hover {
+    color: var(--accent-color);
 }
 
-/* Table styling */
-.table-striped {
- margin-top: 20px;
+/* Smooth transitions for card hover */
+.card {
+    transition: transform 0.5s ease, box-shadow 0.5s ease;
 }
 
-/* Button styling */
-.btn {
- margin-top: 10px;
- margin-bottom: 10px;
+/* Add a slight lift effect on hover */
+.card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Animate.css overrides for cleaner animations */
+.animated {
+    animation-duration: 1.5s !important;  /* Extend the default duration */
+    animation-timing-function: ease-in-out !important;  /* Smooth easing */
+    animation-fill-mode: both !important;  /* Keep animation state after completion */
+}
+
+/* Smooth fade-in effect for page load */
+.fade-in {
+    opacity: 0;
+    animation: fadeInAnimation 2s ease-in-out forwards;
+}
+
+@keyframes fadeInAnimation {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+
+
+/* Footer Customization */
+footer {
+    background-color: white;
+    color: var(--secondary-color);
+    padding: 20px 0;
+    text-align: center;
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
 }
