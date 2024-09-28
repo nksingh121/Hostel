@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Weekly Food Menu{% endblock %}
+
+{% block content %}
+<h1 class="mb-4 text-center">Weekly Food Menu</h1>
+
+<div class="container">
+    <div class="row">
+        {% for day, meals in menus.items() %}
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title text-center">{{ day }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">Breakfast</h6>
+                    <ul class="list-group">
+                        {% for item in meals['Breakfast'] %}
+                        <li class="list-group-item">{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                    <h6 class="card-subtitle mb-2 text-muted mt-3">Lunch</h6>
+                    <ul class="list-group">
+                        {% for item in meals['Lunch'] %}
+                        <li class="list-group-item">{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                    <h6 class="card-subtitle mb-2 text-muted mt-3">Dinner</h6>
+                    <ul class="list-group">
+                        {% for item in meals['Dinner'] %}
+                        <li class="list-group-item">{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

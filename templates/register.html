@@ -4,14 +4,31 @@
 
 {% block content %}
 <h1 class="mb-4">Register</h1>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
 <form action="{{ url_for('register') }}" method="post" class="needs-validation" novalidate>
     <div class="form-group">
-        <label for="username">Username:</label>
-        <input type="text" id="username" name="username" class="form-control" required>
+        <label for="username">Email:</label>
+        <input type="email" id="username" name="username" class="form-control" required>
     </div>
     <div class="form-group">
         <label for="password">Password:</label>
-        <input type="password" id="password" name="password" class="form-control" required>
+        <input type="password" id="password" name="password" class="form-control" required
+               pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).{8,}"
+               title="Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one digit, and one special character.">
     </div>
     <div class="form-group">
         <label for="role">Role:</label>
@@ -20,7 +37,13 @@
             <option value="Tenant">Tenant</option>
         </select>
     </div>
-    <button type="submit" class="btn btn-primary">Register</button>
+    
+    <!-- reCAPTCHA Widget -->
+    <div class="g-recaptcha" data-sitekey="{{ site_key }}"></div>
+    <br/>
+    <button type="submit" class="btn btn-primary mt-3">Register</button>
 </form>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 <a href="{{ url_for('login') }}">Already have an account? Login here.</a>
+
 {% endblock %}
