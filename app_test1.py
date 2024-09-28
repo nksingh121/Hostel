@@ -6,6 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import re
 import requests
+import psycopg2
 from menu_data import weekly_menu  # Import the weekly_menu from menu_data.py
 
 # Load environment variables from .env file
@@ -27,8 +28,13 @@ print("RECAPTCHA_SITE_KEY:", RECAPTCHA_SITE_KEY)
 
 # Function to connect to the database
 def get_db_connection():
-    conn = sqlite3.connect('hostel_management.db')
-    conn.row_factory = sqlite3.Row
+    #conn = sqlite3.connect('hostel_management.db')
+    conn = psycopg2.connect(
+        dbname=os.getenv('DB_NAME'),
+        user=os.getenv('DB_USER'),
+        password=os.getenv('DB_PASSWORD'),
+        host=os.getenv('DB_HOST'),
+        port=os.getenv('DB_PORT')
     return conn
 
 # Route for the home page
