@@ -609,7 +609,8 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        role = request.form['role']
+        # role = request.form['role']
+        role = 'Tenant'
         recaptcha_response = request.form.get('g-recaptcha-response')
 
         # Check if reCAPTCHA response is present
@@ -653,6 +654,60 @@ def register():
             flash('Username already exists. Please choose a different one.', 'danger')
 
     return render_template('register.html', site_key=RECAPTCHA_SITE_KEY)
+
+#Promote other user for admin
+@app.route('/promote_user/<int:user_id>', methods=['POST'])
+def promote_user(user_id):
+    # Check if the current user is an admin
+    if 'username' not in session or session['role'] != 'Admin':
+        return redirect(url_for('login'))
+
+    # Promote the user to admin
+    conn = get_db_connection()
+    conn.execute('UPDATE Users SET role = ? WHERE user_id = ?', ('Admin', user_id))
+    conn.commit()
+    conn.close()
+
+    flash('User promoted to admin!', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+#remove user by admins
+@app.route('/remove_user/<int:user_id>', methods=['POST'])
+def remove_user(user_id):
+    # Check if the current user is an admin
+    if 'username' not in session or session['role'] != 'Admin':
+        return redirect(url_for('login'))
+
+    # Ensure the admin cannot delete themselves
+    if user_id == session.get('user_id'):
+        flash("You cannot remove your own account!", 'danger')
+        return redirect(url_for('admin_dashboard'))
+
+    # Remove the user from the database
+    conn = get_db_connection()
+    conn.execute('DELETE FROM Users WHERE user_id = ?', (user_id,))
+    conn.commit()
+    conn.close()
+
+    flash('User removed successfully!', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+
+
+#admin dashboard for promoting/removing users
+@app.route('/admin_dashboard')
+def admin_dashboard():
+    # Check if the current user is an admin
+    if 'username' not in session or session['role'] != 'Admin':
+        return redirect(url_for('login'))
+
+    # Fetch all users from the database
+    conn = get_db_connection()
+    users = conn.execute('SELECT user_id, username, role FROM Users').fetchall()
+    conn.close()
+
+    return render_template('admin_dashboard.html', users=users)
+
 
 
 
