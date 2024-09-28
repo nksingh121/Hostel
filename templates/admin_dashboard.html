@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4 text-center">Admin Dashboard</h1>
+
+    <!-- List of Users -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user['id'] }}</td>
+                    <td>{{ user['username'] }}</td>
+                    <td>{{ user['role'] }}</td>
+                    <td>
+                        <!-- Promote to Admin Button (only for tenants) -->
+                        {% if user['role'] == 'Tenant' %}
+                        <form method="POST" action="{{ url_for('promote_user', user_id=user['user_id']) }}" style="display:inline-block;">
+                            <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Are you sure you want to promote this user to Admin?')">Promote to Admin</button>
+                        </form>                        
+                        {% else %}
+                        <button class="btn btn-secondary btn-sm" disabled>Already Admin</button>
+                        {% endif %}
+                        
+                        <!-- Remove User Button (only for tenants, disable for admins) -->
+                        {% if user['role'] == 'Admin' %}
+                        <button class="btn btn-danger btn-sm" disabled>Cannot Remove Admin</button>
+                        {% else %}
+                        <form method="POST" action="{{ url_for('remove_user', user_id=user['user_id']) }}" style="display:inline-block; margin-left: 10px;">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to remove this user?')">Remove</button>
+                        </form>
+                        {% endif %}
+
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

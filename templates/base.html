@@ -4,10 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Hostel Management{% endblock %}</title>
+    
     <!-- Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    
     <!-- Custom CSS -->
     <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
+
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+
+    <!-- AOS (Animate on Scroll) -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    
     <style>
         /* Additional custom styling for food menu cards */
         .card {
@@ -33,9 +45,11 @@
     </style>
 </head>
 <body>
-    <!-- Navigation Bar -->
+    <!-- Navbar Links with Icons -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
-        <a class="navbar-brand" href="{{ url_for('index') }}">Hostel Management</a>
+        <a class="navbar-brand" href="{{ url_for('index') }}">
+            <i class="fas fa-building"></i> Hostel Management
+        </a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -43,19 +57,20 @@
             <ul class="navbar-nav ml-auto">
                 {% if 'username' in session %}
                     {% if session['role'] == 'Admin' %}
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('add_tenant') }}">Add Tenant</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('rent_payments') }}">Manage Rent Payments</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('view_complaints') }}">View Complaints</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_menu') }}">Manage Food Menu</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('add_tenant') }}"><i class="fas fa-user-plus"></i> Add Tenant</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('rent_payments') }}"><i class="fas fa-money-bill-wave"></i> Manage Rent Payments</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('view_complaints') }}"><i class="fas fa-exclamation-circle"></i> View Complaints</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_menu') }}"><i class="fas fa-utensils"></i> Manage Food Menu</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_dashboard') }}"><i class="fas fa-user-shield"></i> Admin Dashboard</a></li>
                     {% elif session['role'] == 'Tenant' %}
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('tenant_profile') }}">Profile</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('log_complaint') }}">Log Complaint</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('tenant_menu') }}">Food Menu</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('tenant_profile') }}"><i class="fas fa-user"></i> Profile</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('log_complaint') }}"><i class="fas fa-exclamation-circle"></i> Log Complaint</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('tenant_menu') }}"><i class="fas fa-utensils"></i> Food Menu</a></li>
                     {% endif %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
                 {% else %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('register') }}">Register</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('register') }}"><i class="fas fa-user-plus"></i> Register</a></li>
                 {% endif %}
             </ul>
         </div>
@@ -73,9 +88,24 @@
         </div>
     </footer>
 
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/scripts.js') }}" defer></script>
+
+    <!-- AOS JS Initialization -->
+    <script>
+        AOS.init({
+            duration: 1500,  // Increase duration for a smoother animation
+            easing: 'ease-in-out',  // Smoother easing function for classy animations
+            once: true,  // Only animate once when scrolling
+            delay: 100,  // Add a slight delay to stagger animations
+            offset: 100,  // Trigger animations 100px before elements come into view
+        });
+    </script>
+
+
     <!-- Bootstrap JS and dependencies -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js" defer></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" defer></script>
 </body>
 </html>
