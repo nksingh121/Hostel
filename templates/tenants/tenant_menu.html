@@ -15,25 +15,33 @@
                     <h6 class="card-subtitle mb-2 text-muted">Breakfast</h6>
                     <ul class="list-group">
                         {% for item in meals['Breakfast'] %}
-                        <li class="list-group-item">{{ item }}</li>
+                        <li class="list-group-item">
+                            {{ item }}
+                        </li>
                         {% endfor %}
                     </ul>
                     <h6 class="card-subtitle mb-2 text-muted mt-3">Lunch</h6>
                     <ul class="list-group">
                         {% for item in meals['Lunch'] %}
-                        <li class="list-group-item">{{ item }}</li>
+                        <li class="list-group-item">
+                            {{ item }}
+                        </li>
                         {% endfor %}
                     </ul>
                     <h6 class="card-subtitle mb-2 text-muted mt-3">Dinner</h6>
                     <ul class="list-group">
                         {% for item in meals['Dinner'] %}
-                        <li class="list-group-item">{{ item }}</li>
+                        <li class="list-group-item">
+                            {{ item }}
+                        </li>
                         {% endfor %}
                     </ul>
                 </div>
-            </div>
+                
         </div>
-        {% endfor %}
     </div>
+    {% endfor %}
 </div>
+</div>
+
 {% endblock %}
