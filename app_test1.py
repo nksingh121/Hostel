@@ -28,14 +28,15 @@ print("RECAPTCHA_SITE_KEY:", RECAPTCHA_SITE_KEY)
 
 # Function to connect to the database
 def get_db_connection():
-    #conn = sqlite3.connect('hostel_management.db')
-    conn = psycopg2.connect(
-        dbname=os.getenv('DB_NAME'),
-        user=os.getenv('DB_USER'),
-        password=os.getenv('DB_PASSWORD'),
-        host=os.getenv('DB_HOST'),
-        port=os.getenv('DB_PORT')
-    )
+    conn = sqlite3.connect('hostel_management.db')
+    conn.row_factory = sqlite3.Row
+    # conn = psycopg2.connect(
+    #     dbname=os.getenv('DB_NAME'),
+    #     user=os.getenv('DB_USER'),
+    #     password=os.getenv('DB_PASSWORD'),
+    #     host=os.getenv('DB_HOST'),
+    #     port=os.getenv('DB_PORT')
+    # )
     return conn
 
 # Route for the home page
