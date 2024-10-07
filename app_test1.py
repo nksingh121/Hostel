@@ -17,10 +17,10 @@ app = Flask(__name__)
 # Set the secret key: try to get from the environment, or generate a new one
 app.secret_key = os.getenv('FLASK_SECRET_KEY', secrets.token_hex(16))
 
-# Get the port from the environment variable PORT, or use 5000 by default for local development
-port = int(os.environ.get('PORT', 5000))
-# Bind to 0.0.0.0 to accept connections from anywhere
-app.run(host='0.0.0.0', port=port)
+# # Get the port from the environment variable PORT, or use 5000 by default for local development
+# port = int(os.environ.get('PORT', 5000))
+# # Bind to 0.0.0.0 to accept connections from anywhere
+# app.run(host='0.0.0.0', port=port)
 
 # Use environment variable for reCAPTCHA keys
 RECAPTCHA_SECRET_KEY = os.getenv('RECAPTCHA_SECRET_KEY')
@@ -63,6 +63,7 @@ def index():
         flash('An error occurred while fetching tenant data. Please try again.', 'danger')
         return render_template('index.html', tenants=[])
     return render_template('index.html', tenants=tenants)
+    return "Welcome to the Home Page" 
     
 
 # Admin: Add a new tenant
@@ -769,6 +770,6 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # app.run(debug=True)
     port = int(os.environ.get('PORT', 5000))  # Default to 5000 if no port is specified
     app.run(host='0.0.0.0', port=port)
