@@ -17,6 +17,11 @@ app = Flask(__name__)
 # Set the secret key: try to get from the environment, or generate a new one
 app.secret_key = os.getenv('FLASK_SECRET_KEY', secrets.token_hex(16))
 
+# Get the port from the environment variable PORT, or use 5000 by default for local development
+port = int(os.environ.get('PORT', 5000))
+# Bind to 0.0.0.0 to accept connections from anywhere
+app.run(host='0.0.0.0', port=port)
+
 # Use environment variable for reCAPTCHA keys
 RECAPTCHA_SECRET_KEY = os.getenv('RECAPTCHA_SECRET_KEY')
 RECAPTCHA_SITE_KEY = os.getenv('RECAPTCHA_SITE_KEY')
