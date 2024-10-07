@@ -63,6 +63,7 @@ def index():
         flash('An error occurred while fetching tenant data. Please try again.', 'danger')
         return render_template('index.html', tenants=[])
     return render_template('index.html', tenants=tenants)
+    return "Welcome to the Home Page" 
     
 
 # Admin: Add a new tenant
