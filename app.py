@@ -49,7 +49,7 @@ def get_db_connection():
     try:
         conn = psycopg2.connect(db_url)
         print("Connection successful!")
-        conn.close()
+        # conn.close()
     except Exception as e:
         print(f"Failed to connect: {e}")
     return conn
@@ -743,21 +743,14 @@ def register():
             cursor.execute('INSERT INTO Users (username, password_hash, role) VALUES (%s, %s, %s)',
                          (username, password_hash, role))
             conn.commit()
-            # cursor.close()
-            # conn.close()
+            cursor.close()
+            conn.close()
             flash('Registration successful. Please log in.', 'success')
             return redirect(url_for('login'))
         except psycopg2.IntegrityError:
             # Handle integrity errors, such as duplicate usernames
             conn.rollback()  # Rollback the transaction in case of error
             flash('Username already exists. Please choose a different one.', 'danger')
-
-        finally:
-            # Ensure cursor and connection are closed after use
-            if cursor:
-                cursor.close()
-            if conn:
-                conn.close()
 
     return render_template('register.html', site_key=RECAPTCHA_SITE_KEY)
 
