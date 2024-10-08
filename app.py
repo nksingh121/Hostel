@@ -743,14 +743,21 @@ def register():
             cursor.execute('INSERT INTO Users (username, password_hash, role) VALUES (%s, %s, %s)',
                          (username, password_hash, role))
             conn.commit()
-            cursor.close()
-            conn.close()
+            # cursor.close()
+            # conn.close()
             flash('Registration successful. Please log in.', 'success')
             return redirect(url_for('login'))
-        except sqlite3.IntegrityError:
-            cursor.close()
-            conn.close()
+        except psycopg2.IntegrityError:
+            # Handle integrity errors, such as duplicate usernames
+            conn.rollback()  # Rollback the transaction in case of error
             flash('Username already exists. Please choose a different one.', 'danger')
+
+        finally:
+            # Ensure cursor and connection are closed after use
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
 
     return render_template('register.html', site_key=RECAPTCHA_SITE_KEY)
 
