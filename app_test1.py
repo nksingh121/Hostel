@@ -46,6 +46,12 @@ def get_db_connection():
     # )
     db_url = os.getenv('DATABASE_URL')
     conn = psycopg2.connect(db_url)
+    try:
+        conn = psycopg2.connect(db_url)
+        print("Connection successful!")
+        conn.close()
+    except Exception as e:
+        print(f"Failed to connect: {e}")
     return conn
 
 # Route for the home page
