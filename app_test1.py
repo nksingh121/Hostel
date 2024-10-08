@@ -234,8 +234,8 @@ def rent_payments():
         cursor.execute('INSERT INTO Payments (tenant_id, amount, date, status, payment_method) VALUES (%s, %s, %s, %s, %s)',
                      (tenant_id, amount, date, 'Paid', payment_method))
         conn.commit()
-        cursor.close()
-        conn.close()
+        # cursor.close()
+        # conn.close()
         flash('Payment recorded successfully!', 'success')
         return redirect(url_for('rent_payments'))
 
@@ -297,8 +297,8 @@ def edit_payment(payment_id):
         cursor.execute('UPDATE Payments SET amount = %s, date = %s, status = %s, payment_method = %s WHERE payment_id = %s',
                      (amount, date, status, payment_method, payment_id))
         conn.commit()
-        cursor.close()
-        conn.close()
+        # cursor.close()
+        # conn.close()
 
         flash('Payment details updated successfully!', 'success')
         return redirect(url_for('rent_payments'))
@@ -369,6 +369,16 @@ def update_complaint_status(complaint_id):
     cursor = conn.cursor()
     cursor.execute('UPDATE Complaints SET status = %s WHERE complaint_id = %s', (new_status, complaint_id))
     conn.commit()
+
+    query = '''
+    SELECT Complaints.*, Tenants.name as tenant_name, Tenants.room_number 
+    FROM Complaints 
+    INNER JOIN Tenants ON Complaints.tenant_id = Tenants.tenant_id 
+    '''
+    
+    cursor.execute(query)
+    complaints = cursor.fetchall()
+
     cursor.close()
     conn.close()
 
@@ -564,7 +574,8 @@ def handle_edit_request(complaint_id):
         flash('Edit request approved. Tenant can now edit the complaint.', 'success')
 
         # Get the tenant ID associated with this complaint
-        tenant_id = cursor.execute('SELECT tenant_id FROM Complaints WHERE complaint_id = %s', (complaint_id,)).fetchone()['tenant_id']
+        tenant_id = cursor.execute('SELECT tenant_id FROM Complaints WHERE complaint_id = %s', (complaint_id,))
+        tenant_id = cursor.fetchone()
         # Set a flag in the session to show a message to the tenant
         session['tenant_message'] = f"Your edit request for complaint {complaint_id} was approved. You can now edit your complaint."
 
@@ -574,7 +585,8 @@ def handle_edit_request(complaint_id):
         flash('Edit request rejected.', 'danger')
 
         # Get the tenant ID associated with this complaint
-        tenant_id = cursor.execute('SELECT tenant_id FROM Complaints WHERE complaint_id = %s', (complaint_id,)).fetchone()['tenant_id']
+        tenant_id = cursor.execute('SELECT tenant_id FROM Complaints WHERE complaint_id = %s', (complaint_id,))
+        tenant_id = cursor.fetchone()
         # Set a flag in the session to show a message to the tenant
         session['tenant_message'] = f"Your edit request for complaint {complaint_id} was declined."
 
