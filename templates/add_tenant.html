@@ -21,7 +21,7 @@
         <label for="room_number">Room Number:</label>
         <select id="room_number" name="room_number" class="form-control" required>
             {% for room in available_rooms %}
-                <option value="{{ room['room_number'] }}">{{ room['room_number'] }}</option>
+                <option value="{{ room[0] }}">{{ room[0] }}</option>
             {% endfor %}
         </select>
     </div>
