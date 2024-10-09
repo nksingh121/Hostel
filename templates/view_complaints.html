@@ -10,8 +10,8 @@
     <select name="tenant_id" class="form-control mr-2">
         <option value="">All Tenants</option>
         {% for tenant in tenants %}
-            <option value="{{ tenant['tenant_id'] }}" {% if request.args.get('tenant_id') == tenant['tenant_id']|string %}selected{% endif %}>
-                {{ tenant['name'] }} (Room {{ tenant['room_number'] }})
+            <option value="{{ tenant[0] }}" {% if request.args.get('tenant_id') == tenant[0]|string %}selected{% endif %}>
+                {{ tenant[1] }} (Room {{ tenant[2] }})
             </option>
         {% endfor %}
     </select>
@@ -41,24 +41,24 @@
     <tbody>
         {% for complaint in complaints %}
         <tr>
-            <td>{{ complaint['tenant_name'] }} (Room {{ complaint['room_number'] }})</td>
-            <td>{{ complaint['description'] }}</td>
-            <td>{{ complaint['date'] }}</td>
-            <td>{{ complaint['status'] }}</td>
+            <td>{{ complaint[5] }} (Room {{ complaint[6] }})</td>
+            <td>{{ complaint[2] }}</td>
+            <td>{{ complaint[3] }}</td>
+            <td>{{ complaint[4] }}</td>
             <td>
-                {% if complaint['status'] == 'Edit Requested' %}
+                {% if complaint[4] == 'Edit Requested' %}
                 <!-- Approve/Reject Edit Request -->
-                <form method="POST" action="{{ url_for('handle_edit_request', complaint_id=complaint['complaint_id']) }}" class="form-inline">
+                <form method="POST" action="{{ url_for('handle_edit_request', complaint_id=complaint[0]) }}" class="form-inline">
                     <button type="submit" name="action" value="approve" class="btn btn-success btn-sm">Approve</button>
                     <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm">Reject</button>
                 </form>
                 {% else %}
                 <!-- Update Status Dropdown -->
-                <form method="POST" action="{{ url_for('update_complaint_status', complaint_id=complaint['complaint_id']) }}" class="form-inline">
+                <form method="POST" action="{{ url_for('update_complaint_status', complaint_id=complaint[0]) }}" class="form-inline">
                     <select name="status" class="form-control mr-2">
-                        <option value="Open" {% if complaint['status'] == 'Open' %}selected{% endif %}>Open</option>
-                        <option value="In Progress" {% if complaint['status'] == 'In Progress' %}selected{% endif %}>In Progress</option>
-                        <option value="Done" {% if complaint['status'] == 'Done' %}selected{% endif %}>Done</option>
+                        <option value="Open" {% if complaint[4] == 'Open' %}selected{% endif %}>Open</option>
+                        <option value="In Progress" {% if complaint[4] == 'In Progress' %}selected{% endif %}>In Progress</option>
+                        <option value="Done" {% if complaint[4] == 'Done' %}selected{% endif %}>Done</option>
                     </select>
                     <button type="submit" class="btn btn-success btn-sm">Update</button>
                 </form>

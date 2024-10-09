@@ -51,22 +51,22 @@ function confirmComplaintSubmission() {
         {% for complaint in complaints %}
         <tr>
             <td>
-                {% if complaint['status'] == 'Approved for Edit' %}
+                {% if complaint[4] == 'Approved for Edit' %}
                 <!-- Editable Textarea for Approved Complaints -->
-                <form method="POST" action="{{ url_for('edit_complaint', complaint_id=complaint['complaint_id']) }}">
+                <form method="POST" action="{{ url_for('edit_complaint', complaint_id=complaint[0]) }}">
                     <textarea name="description" class="form-control">{{ complaint['description'] }}</textarea>
                     <button type="submit" class="btn btn-success btn-sm mt-2">Save Changes</button>
                 </form>
                 {% else %}
-                {{ complaint['description'] }}
+                {{ complaint[2] }}
                 {% endif %}
             </td>
-            <td>{{ complaint['date'] }}</td>
-            <td>{{ complaint['status'] }}</td>
+            <td>{{ complaint[3] }}</td>
+            <td>{{ complaint[4] }}</td>
             <td>
-                {% if complaint['status'] == 'Open' %}
+                {% if complaint[4] == 'Open' %}
                 <!-- Corrected Edit Request Button -->
-                <form method="POST" action="{{ url_for('request_edit_complaint', complaint_id=complaint['complaint_id']) }}" style="display:inline;">
+                <form method="POST" action="{{ url_for('request_edit_complaint', complaint_id=complaint[0]) }}" style="display:inline;">
                     <button type="submit" class="btn btn-warning btn-sm">Request Edit</button>
                 </form>
                 {% else %}

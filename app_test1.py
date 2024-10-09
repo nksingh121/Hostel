@@ -8,6 +8,8 @@ import re
 import requests
 import psycopg2
 from menu_data import weekly_menu  # Import the weekly_menu from menu_data.py
+from psycopg2.extras import RealDictCursor
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -33,8 +35,8 @@ print("RECAPTCHA_SITE_KEY:", RECAPTCHA_SITE_KEY)
 
 # Function to connect to the database
 def get_db_connection():
-    conn = sqlite3.connect('hostel_management.db')
-    conn.row_factory = sqlite3.Row
+    # conn = sqlite3.connect('hostel_management.db')
+    # conn.row_factory = sqlite3.Row
     # conn = psycopg2.connect(
     #     dbname=os.getenv('DB_NAME'),
     #     user=os.getenv('DB_USER'),
@@ -42,6 +44,14 @@ def get_db_connection():
     #     host=os.getenv('DB_HOST'),
     #     port=os.getenv('DB_PORT')
     # )
+    db_url = os.getenv('DATABASE_URL')
+    conn = psycopg2.connect(db_url)
+    try:
+        conn = psycopg2.connect(db_url)
+        print("Connection successful!")
+        # conn.close()
+    except Exception as e:
+        print(f"Failed to connect: {e}")
     return conn
 
 # Route for the home page
@@ -57,13 +67,16 @@ def index():
     try:
     # For admin, show all tenants
         conn = get_db_connection()
-        tenants = conn.execute('SELECT * FROM Tenants').fetchall()
+        cursor = conn.cursor()
+        tenants = cursor.execute('SELECT * FROM Tenants')
+        tenants = cursor.fetchall()
+        cursor.close()
         conn.close()
     except Exception as e:
         flash('An error occurred while fetching tenant data. Please try again.', 'danger')
         return render_template('index.html', tenants=[])
     return render_template('index.html', tenants=tenants)
-    return "Welcome to the Home Page" 
+    
     
 
 # Admin: Add a new tenant
@@ -73,6 +86,7 @@ def add_tenant():
         return redirect(url_for('login'))
     
     conn = get_db_connection()
+    cursor = conn.cursor()
 
     if request.method == 'POST':
         name = request.form['name']
@@ -84,23 +98,27 @@ def add_tenant():
         # Server-side validation
         if not name or not email or not phone or not room_number or not join_date:
             flash('All fields are required!', 'danger')
-            available_rooms = conn.execute('SELECT * FROM Rooms WHERE status = "available"').fetchall()
+            cursor.execute('SELECT * FROM Rooms WHERE status = %s ORDER BY room_number ASC', ('available',))
+            available_rooms = cursor.fetchall()
             return render_template('add_tenant.html', available_rooms=available_rooms)
 
         # Insert new tenant into the database
-        conn.execute('INSERT INTO Tenants (name, email, phone, room_number, join_date) VALUES (?, ?, ?, ?, ?)',
+        cursor.execute('INSERT INTO Tenants (name, email, phone, room_number, join_date) VALUES (%s, %s, %s, %s, %s)',
                      (name, email, phone, room_number, join_date))
 
         # Update the room status to 'occupied'
-        conn.execute('UPDATE Rooms SET status = "occupied" WHERE room_number = ?', (room_number,))
+        cursor.execute('UPDATE Rooms SET status = %s WHERE room_number = %s', ('occupied',room_number,))
         conn.commit()
+        cursor.close()
         conn.close()
 
         flash('Tenant added successfully!', 'success')
         return redirect(url_for('index'))
 
     # Fetch available rooms
-    available_rooms = conn.execute('SELECT * FROM Rooms WHERE status = "available"').fetchall()
+    cursor.execute('SELECT * FROM Rooms WHERE status = %s ORDER BY room_number ASC', ('available',))
+    available_rooms = cursor.fetchall()
+    cursor.close()
     conn.close()
     return render_template('add_tenant.html', available_rooms=available_rooms)
 
@@ -113,7 +131,10 @@ def edit_tenant(tenant_id):
         return redirect(url_for('login'))
     
     conn = get_db_connection()
-    tenant = conn.execute('SELECT * FROM Tenants WHERE tenant_id = ?', (tenant_id,)).fetchone()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM Tenants WHERE tenant_id = %s', (tenant_id,))
+    tenant = cursor.fetchone()
 
     if request.method == 'POST':
         name = request.form['name']
@@ -121,33 +142,37 @@ def edit_tenant(tenant_id):
         phone = request.form['phone']
         new_room_number = request.form['room_number']
         join_date = request.form['join_date']
-        old_room_number = tenant['room_number']  # Get the previously assigned room number
+        old_room_number = tenant[4]  # Get the previously assigned room number
 
         # Server-side validation
         if not name or not email or not phone or not new_room_number or not join_date:
             flash('All fields are required!', 'danger')
-            available_rooms = conn.execute('SELECT * FROM Rooms WHERE status = "available"').fetchall()
+            cursor.execute('SELECT * FROM Rooms WHERE status = %s order by room_number asc',('available',))
+            available_rooms = cursor.fetchall()
             return render_template('edit_tenant.html', tenant=tenant, available_rooms=available_rooms)
 
         # Update tenant details in the database
-        conn.execute('UPDATE Tenants SET name = ?, email = ?, phone = ?, room_number = ?, join_date = ? WHERE tenant_id = ?',
+        cursor.execute('''UPDATE Tenants SET name = %s, email = %s, phone = %s, room_number = %s, join_date = %s WHERE tenant_id = %s''',
                      (name, email, phone, new_room_number, join_date, tenant_id))
 
         # Update room status if room number has changed
         if new_room_number != old_room_number:
             # Set the new room to 'occupied'
-            conn.execute('UPDATE Rooms SET status = "occupied" WHERE room_number = ?', (new_room_number,))
+            cursor.execute('UPDATE Rooms SET status = %s WHERE room_number = %s', ('occupied',new_room_number,))
             # Set the old room to 'available'
-            conn.execute('UPDATE Rooms SET status = "available" WHERE room_number = ?', (old_room_number,))
+            cursor.execute('UPDATE Rooms SET status = %s WHERE room_number = %s', ('available',old_room_number,))
         
         conn.commit()
+        cursor.close()
         conn.close()
 
         flash('Tenant details updated successfully!', 'success')
         return redirect(url_for('index'))
 
     # Fetch available rooms excluding the current room number
-    available_rooms = conn.execute('SELECT * FROM Rooms WHERE status = "available" OR room_number = ?', (tenant['room_number'],)).fetchall()
+    cursor.execute('SELECT * FROM Rooms WHERE status = %s OR room_number = %s order by room_number asc', ('available',tenant[4],))
+    available_rooms = cursor.fetchall()
+    cursor.close()
     conn.close()
     return render_template('edit_tenant.html', tenant=tenant, available_rooms=available_rooms)
 
@@ -159,6 +184,7 @@ def rent_payments():
         return redirect(url_for('login'))
     
     conn = get_db_connection()
+    cursor = conn.cursor()
 
     # Retrieve filter/search parameters
     tenant_id = request.args.get('tenant_id', '')
@@ -177,25 +203,27 @@ def rent_payments():
     params = []
 
     if tenant_id:
-        query += ' AND Tenants.tenant_id = ?'
+        query += ' AND Tenants.tenant_id = %s'
         params.append(tenant_id)
     if start_date:
-        query += ' AND Payments.date >= ?'
+        query += ' AND Payments.date >= %s'
         params.append(start_date)
     if end_date:
-        query += ' AND Payments.date <= ?'
+        query += ' AND Payments.date <= %s'
         params.append(end_date)
     if status:
-        query += ' AND Payments.status = ?'
+        query += ' AND Payments.status = %s'
         params.append(status)
     if payment_method:
-        query += ' AND Payments.payment_method = ?'
+        query += ' AND Payments.payment_method = %s'
         params.append(payment_method)
 
-    payments = conn.execute(query, params).fetchall()
+    payments = cursor.execute(query, params)
+    payments = cursor.fetchall()
 
     # Fetch tenant information for dropdowns
-    tenants = conn.execute('SELECT tenant_id, name, room_number FROM Tenants').fetchall()
+    tenants = cursor.execute('SELECT tenant_id, name, room_number FROM Tenants')
+    tenants = cursor.fetchall()
 
     if request.method == 'POST':
         tenant_id = request.form['tenant_id']
@@ -209,13 +237,15 @@ def rent_payments():
             return render_template('rent_payments.html', payments=payments, tenants=tenants)
 
         # Insert new payment into the database
-        conn.execute('INSERT INTO Payments (tenant_id, amount, date, status, payment_method) VALUES (?, ?, ?, ?, ?)',
+        cursor.execute('INSERT INTO Payments (tenant_id, amount, date, status, payment_method) VALUES (%s, %s, %s, %s, %s)',
                      (tenant_id, amount, date, 'Paid', payment_method))
         conn.commit()
-        conn.close()
+        # cursor.close()
+        # conn.close()
         flash('Payment recorded successfully!', 'success')
         return redirect(url_for('rent_payments'))
 
+    cursor.close()
     conn.close()
     return render_template('rent_payments.html', payments=payments, tenants=tenants)
 
@@ -227,18 +257,21 @@ def delete_payment(payment_id):
         return redirect(url_for('login'))
 
     conn = get_db_connection()
+    cursor = conn.cursor()
 
     # Check if the payment exists
-    payment = conn.execute('SELECT * FROM Payments WHERE payment_id = ?', (payment_id,)).fetchone()
+    payment = cursor.execute('SELECT * FROM Payments WHERE payment_id = %s', (payment_id,))
+    payment = cursor.fetchone()
 
     if payment:
         # Delete the payment
-        conn.execute('DELETE FROM Payments WHERE payment_id = ?', (payment_id,))
+        cursor.execute('DELETE FROM Payments WHERE payment_id = %s', (payment_id,))
         conn.commit()
         flash('Payment deleted successfully!', 'success')
     else:
         flash('Payment not found!', 'danger')
 
+    cursor.close()
     conn.close()
     return redirect(url_for('rent_payments'))
 
@@ -251,7 +284,9 @@ def edit_payment(payment_id):
         return redirect(url_for('login'))
 
     conn = get_db_connection()
-    payment = conn.execute('SELECT * FROM Payments WHERE payment_id = ?', (payment_id,)).fetchone()
+    cursor = conn.cursor()
+    payment = cursor.execute('SELECT * FROM Payments WHERE payment_id = %s', (payment_id,))
+    payment = cursor.fetchone()
 
     if request.method == 'POST':
         amount = request.form['amount']
@@ -265,14 +300,16 @@ def edit_payment(payment_id):
             return render_template('edit_payment.html', payment=payment)
 
         # Update payment details in the database
-        conn.execute('UPDATE Payments SET amount = ?, date = ?, status = ?, payment_method = ? WHERE payment_id = ?',
+        cursor.execute('UPDATE Payments SET amount = %s, date = %s, status = %s, payment_method = %s WHERE payment_id = %s',
                      (amount, date, status, payment_method, payment_id))
         conn.commit()
-        conn.close()
+        # cursor.close()
+        # conn.close()
 
         flash('Payment details updated successfully!', 'success')
         return redirect(url_for('rent_payments'))
 
+    cursor.close()
     conn.close()
     return render_template('edit_payment.html', payment=payment)
 
@@ -285,6 +322,7 @@ def view_complaints():
         return redirect(url_for('login'))
 
     conn = get_db_connection()
+    cursor = conn.cursor()
 
     # Retrieve filter parameters
     tenant_id = request.args.get('tenant_id', '')
@@ -302,23 +340,26 @@ def view_complaints():
     params = []
 
     if tenant_id:
-        query += ' AND Tenants.tenant_id = ?'
+        query += ' AND Tenants.tenant_id = %s'
         params.append(tenant_id)
     if start_date:
-        query += ' AND Complaints.date >= ?'
+        query += ' AND Complaints.date >= %s'
         params.append(start_date)
     if end_date:
-        query += ' AND Complaints.date <= ?'
+        query += ' AND Complaints.date <= %s'
         params.append(end_date)
     if status:
-        query += ' AND Complaints.status = ?'
+        query += ' AND Complaints.status = %s'
         params.append(status)
 
-    complaints = conn.execute(query, params).fetchall()
+    complaints = cursor.execute(query, params)
+    complaints = cursor.fetchall()
 
     # Fetch tenant information for dropdowns
-    tenants = conn.execute('SELECT tenant_id, name, room_number FROM Tenants').fetchall()
+    tenants = cursor.execute('SELECT tenant_id, name, room_number FROM Tenants')
+    tenants = cursor.fetchall()
 
+    cursor.close()
     conn.close()
     return render_template('view_complaints.html', complaints=complaints, tenants=tenants)
 
@@ -331,8 +372,20 @@ def update_complaint_status(complaint_id):
     new_status = request.form['status']
 
     conn = get_db_connection()
-    conn.execute('UPDATE Complaints SET status = ? WHERE complaint_id = ?', (new_status, complaint_id))
+    cursor = conn.cursor()
+    cursor.execute('UPDATE Complaints SET status = %s WHERE complaint_id = %s', (new_status, complaint_id))
     conn.commit()
+
+    query = '''
+    SELECT Complaints.*, Tenants.name as tenant_name, Tenants.room_number 
+    FROM Complaints 
+    INNER JOIN Tenants ON Complaints.tenant_id = Tenants.tenant_id 
+    '''
+    
+    cursor.execute(query)
+    complaints = cursor.fetchall()
+
+    cursor.close()
     conn.close()
 
     flash('Complaint status updated successfully!', 'success')
@@ -345,10 +398,12 @@ def delete_complaint(complaint_id):
         return redirect(url_for('login'))
 
     conn = get_db_connection()
+    cursor = conn.cursor()
 
     # Execute deletion query
-    conn.execute('DELETE FROM Complaints WHERE complaint_id = ?', (complaint_id,))
+    cursor.execute('DELETE FROM Complaints WHERE complaint_id = %s', (complaint_id,))
     conn.commit()
+    cursor.close()
     conn.close()
 
     flash('Complaint deleted successfully!', 'success')
@@ -363,28 +418,31 @@ def delete_tenant(tenant_id):
         return redirect(url_for('login'))
 
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     # Fetch the tenant's details including their room number and email
-    tenant = conn.execute('SELECT * FROM Tenants WHERE tenant_id = ?', (tenant_id,)).fetchone()
+    tenant = cursor.execute('SELECT * FROM Tenants WHERE tenant_id = %s', (tenant_id,))
+    tenant = cursor.fetchone()
     
     if tenant:
-        room_number = tenant['room_number']  # Get the room number of the tenant
-        email = tenant['email']  # Get the email of the tenant
+        room_number = tenant[4]  # Get the room number of the tenant
+        email = tenant[2]  # Get the email of the tenant
 
         # Remove tenant from the Tenants table
-        conn.execute('DELETE FROM Tenants WHERE tenant_id = ?', (tenant_id,))
+        cursor.execute('DELETE FROM Tenants WHERE tenant_id = %s', (tenant_id,))
         
         # Remove user from the Users table using tenant's email as username
-        conn.execute('DELETE FROM Users WHERE username = ?', (email,))
+        cursor.execute('DELETE FROM Users WHERE username = %s', (email,))
 
         # Update the room status to 'available'
-        conn.execute('UPDATE Rooms SET status = "available" WHERE room_number = ?', (room_number,))
+        cursor.execute('UPDATE Rooms SET status = %s WHERE room_number = %s', ('available', room_number,))
         
         conn.commit()
         flash('Tenant and associated user account removed successfully!', 'success')
     else:
         flash('Tenant not found!', 'danger')
 
+    cursor.close()
     conn.close()
     return redirect(url_for('index'))
 
@@ -398,8 +456,12 @@ def tenant_profile():
     
     # Fetch tenant's details based on the logged-in username
     conn = get_db_connection()
-    tenant = conn.execute('SELECT * FROM Tenants WHERE email = ?', (session['username'],)).fetchone()
-    rent_history = conn.execute('SELECT * FROM Payments WHERE tenant_id = ?', (tenant['tenant_id'],)).fetchall()
+    cursor = conn.cursor()
+    tenant = cursor.execute('SELECT * FROM Tenants WHERE email = %s', (session['username'],))
+    tenant = cursor.fetchone()
+    rent_history = cursor.execute('SELECT * FROM Payments WHERE tenant_id = %s', (tenant[0],))
+    rent_history = cursor.fetchall()
+    cursor.close()
     conn.close()
     return render_template('tenants/tenant_profile.html', tenant=tenant, rent_history=rent_history)
 
@@ -410,13 +472,14 @@ def log_complaint():
         return redirect(url_for('login'))
 
     conn = get_db_connection()
+    cursor = conn.cursor()
 
     if request.method == 'POST':
         tenant_id = session['tenant_id']
         description = request.form['description']
 
         # Insert the new complaint into the database
-        conn.execute('INSERT INTO Complaints (tenant_id, description, date, status) VALUES (?, ?, DATE("now"), ?)',
+        cursor.execute('INSERT INTO Complaints (tenant_id, description, date, status) VALUES (%s, %s, CURRENT_DATE, %s)',
                      (tenant_id, description, 'Open'))
         conn.commit()
         flash('Complaint submitted successfully!', 'success')
@@ -424,13 +487,15 @@ def log_complaint():
 
     # Fetch all complaints for the logged-in tenant
     tenant_id = session['tenant_id']
-    complaints = conn.execute('SELECT * FROM Complaints WHERE tenant_id = ? ORDER BY date DESC', (tenant_id,)).fetchall()
+    complaints = cursor.execute('SELECT * FROM Complaints WHERE tenant_id = %s ORDER BY date DESC', (tenant_id,))
+    complaints = cursor.fetchall()
 
     # Check if there is a message for the tenant from the admin's action
     if 'tenant_message' in session:
         flash(session['tenant_message'], 'info')
         session.pop('tenant_message')  # Remove the message from the session after displaying it
 
+    cursor.close()
     conn.close()
     return render_template('/tenants/log_complaint.html', complaints=complaints)
 
@@ -446,15 +511,19 @@ def request_edit_complaint(complaint_id):
 
     # Check if the complaint belongs to the tenant
     conn = get_db_connection()
-    complaint = conn.execute('SELECT * FROM Complaints WHERE complaint_id = ? AND tenant_id = ?', (complaint_id, tenant_id)).fetchone()
+    cursor = conn.cursor()
+    complaint = cursor.execute('SELECT * FROM Complaints WHERE complaint_id = %s AND tenant_id = %s', (complaint_id, tenant_id))
+    complaint = cursor.fetchone()
 
     if complaint:
         # Update the status to 'Edit Requested'
-        conn.execute('UPDATE Complaints SET status = ? WHERE complaint_id = ?', ('Edit Requested', complaint_id))
+        cursor.execute('UPDATE Complaints SET status = %s WHERE complaint_id = %s', ('Edit Requested', complaint_id))
         conn.commit()
+        cursor.close()
         conn.close()
         flash('Edit request sent to the admin.', 'success')
     else:
+        cursor.close()
         conn.close()
         flash('Complaint not found or does not belong to you.', 'danger')
 
@@ -471,20 +540,24 @@ def edit_complaint(complaint_id):
     description = request.form['description']
 
     conn = get_db_connection()
+    cursor = conn.cursor()
 
     # Ensure the complaint belongs to the tenant and is approved for editing
-    complaint = conn.execute('SELECT * FROM Complaints WHERE complaint_id = ? AND tenant_id = ? AND status = ?', 
-                             (complaint_id, tenant_id, 'Approved for Edit')).fetchone()
+    complaint = cursor.execute('SELECT * FROM Complaints WHERE complaint_id = %s AND tenant_id = %s AND status = %s', 
+                             (complaint_id, tenant_id, 'Approved for Edit'))
+    complaint = cursor.fetchone()
+
 
     if complaint:
         # Update the complaint description
-        conn.execute('UPDATE Complaints SET description = ?, status = ? WHERE complaint_id = ?', 
+        cursor.execute('UPDATE Complaints SET description = %s, status = %s WHERE complaint_id = %s', 
                      (description, 'Open', complaint_id))
         conn.commit()
         flash('Complaint updated successfully!', 'success')
     else:
         flash('Complaint not found or not authorized to edit.', 'danger')
 
+    cursor.close()
     conn.close()
     return redirect(url_for('log_complaint'))
 
@@ -499,28 +572,32 @@ def handle_edit_request(complaint_id):
 
     action = request.form['action']
     conn = get_db_connection()
+    cursor = conn.cursor()
 
     if action == 'approve':
         # Allow the tenant to edit the complaint
-        conn.execute('UPDATE Complaints SET status = ? WHERE complaint_id = ?', ('Approved for Edit', complaint_id))
+        cursor.execute('UPDATE Complaints SET status = %s WHERE complaint_id = %s', ('Approved for Edit', complaint_id))
         flash('Edit request approved. Tenant can now edit the complaint.', 'success')
 
         # Get the tenant ID associated with this complaint
-        tenant_id = conn.execute('SELECT tenant_id FROM Complaints WHERE complaint_id = ?', (complaint_id,)).fetchone()['tenant_id']
+        tenant_id = cursor.execute('SELECT tenant_id FROM Complaints WHERE complaint_id = %s', (complaint_id,))
+        tenant_id = cursor.fetchone()
         # Set a flag in the session to show a message to the tenant
         session['tenant_message'] = f"Your edit request for complaint {complaint_id} was approved. You can now edit your complaint."
 
     elif action == 'reject':
         # Reject the edit request
-        conn.execute('UPDATE Complaints SET status = ? WHERE complaint_id = ?', ('Open', complaint_id))
+        cursor.execute('UPDATE Complaints SET status = %s WHERE complaint_id = %s', ('Open', complaint_id))
         flash('Edit request rejected.', 'danger')
 
         # Get the tenant ID associated with this complaint
-        tenant_id = conn.execute('SELECT tenant_id FROM Complaints WHERE complaint_id = ?', (complaint_id,)).fetchone()['tenant_id']
+        tenant_id = cursor.execute('SELECT tenant_id FROM Complaints WHERE complaint_id = %s', (complaint_id,))
+        tenant_id = cursor.fetchone()
         # Set a flag in the session to show a message to the tenant
         session['tenant_message'] = f"Your edit request for complaint {complaint_id} was declined."
 
     conn.commit()
+    cursor.close()
     conn.close()
     return redirect(url_for('view_complaints'))
 
@@ -535,7 +612,9 @@ def food_menu():
         return redirect(url_for('login'))
     
     conn = get_db_connection()
-    menu_items = conn.execute('SELECT * FROM Menu ORDER BY date DESC').fetchall()
+    cursor = conn.cursor()
+    menu_items = cursor.execute('SELECT * FROM Menu ORDER BY date DESC').fetchall()
+    cursor.close()
     conn.close()
     return render_template('tenants/food_menu.html', menu_items=menu_items)
 #-----------------------------------------------------------------x-------------------------------------------------------#
@@ -546,19 +625,22 @@ def food_menu():
 #         return redirect(url_for('login'))
     
 #     conn = get_db_connection()
-#     menu_items = conn.execute('SELECT * FROM Menu').fetchall()
+#     cursor = conn.cursor()
+#     menu_items = cursor.execute('SELECT * FROM Menu').fetchall()
 
 #     if request.method == 'POST':
 #         date = request.form['date']
 #         meal_type = request.form['meal_type']
 #         items = request.form['items']
 
-#         conn.execute('INSERT INTO Menu (date, meal_type, items) VALUES (?, ?, ?)', (date, meal_type, items))
+#         cursor.execute('INSERT INTO Menu (date, meal_type, items) VALUES (%s, %s, %s)', (date, meal_type, items))
 #         conn.commit()
+#         cursor.close()
 #         conn.close()
 #         flash('Menu updated successfully!', 'success')
 #         return redirect(url_for('menu'))
 
+#     cursor.close()
 #     conn.close()
 #     return render_template('menu.html', menu_items=menu_items)
 
@@ -656,15 +738,18 @@ def register():
 
         password_hash = generate_password_hash(password)
         conn = get_db_connection()
+        cursor = conn.cursor()
         try:
-            conn.execute('INSERT INTO Users (username, password_hash, role) VALUES (?, ?, ?)',
+            cursor.execute('INSERT INTO Users (username, password_hash, role) VALUES (%s, %s, %s)',
                          (username, password_hash, role))
             conn.commit()
+            cursor.close()
             conn.close()
             flash('Registration successful. Please log in.', 'success')
             return redirect(url_for('login'))
-        except sqlite3.IntegrityError:
-            conn.close()
+        except psycopg2.IntegrityError:
+            # Handle integrity errors, such as duplicate usernames
+            conn.rollback()  # Rollback the transaction in case of error
             flash('Username already exists. Please choose a different one.', 'danger')
 
     return render_template('register.html', site_key=RECAPTCHA_SITE_KEY)
@@ -678,8 +763,10 @@ def promote_user(user_id):
 
     # Promote the user to admin
     conn = get_db_connection()
-    conn.execute('UPDATE Users SET role = ? WHERE user_id = ?', ('Admin', user_id))
+    cursor = conn.cursor()
+    cursor.execute('UPDATE Users SET role = %s WHERE user_id = %s', ('Admin', user_id))
     conn.commit()
+    cursor.close()
     conn.close()
 
     flash('User promoted to admin!', 'success')
@@ -699,8 +786,10 @@ def remove_user(user_id):
 
     # Remove the user from the database
     conn = get_db_connection()
-    conn.execute('DELETE FROM Users WHERE user_id = ?', (user_id,))
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM Users WHERE user_id = %s', (user_id,))
     conn.commit()
+    cursor.close()                                                                 
     conn.close()
 
     flash('User removed successfully!', 'success')
@@ -717,7 +806,10 @@ def admin_dashboard():
 
     # Fetch all users from the database
     conn = get_db_connection()
-    users = conn.execute('SELECT user_id, username, role FROM Users').fetchall()
+    cursor = conn.cursor()
+    users = cursor.execute('SELECT user_id, username, role FROM Users')
+    users = cursor.fetchall()
+    cursor.close()
     conn.close()
 
     return render_template('admin_dashboard.html', users=users)
@@ -733,22 +825,28 @@ def login():
         password = request.form['password']
 
         conn = get_db_connection()
-        user = conn.execute('SELECT * FROM Users WHERE username = ?', (username,)).fetchone()
+        cursor = conn.cursor()
+        user = cursor.execute('SELECT * FROM Users WHERE username = %s', (username,))
+        user = cursor.fetchone()
+        cursor.close()
         conn.close()
 
-        if user and check_password_hash(user['password_hash'], password):
+        if user and check_password_hash(user[2], password):
             # Store common session details for both roles
-            session['username'] = user['username']
-            session['role'] = user['role']
+            session['username'] = user[1]
+            session['role'] = user[3]
             
-            if user['role'] == 'Tenant':
+            if user[3] == 'Tenant':
                 # Additional step for Tenant: fetch and store tenant_id
                 conn = get_db_connection()
-                tenant = conn.execute('SELECT tenant_id FROM Tenants WHERE email = ?', (username,)).fetchone()
+                cursor = conn.cursor()
+                tenant = cursor.execute('SELECT tenant_id FROM Tenants WHERE email = %s', (username,))
+                tenant = cursor.fetchone()
+                cursor.close()
                 conn.close()
 
                 if tenant:
-                    session['tenant_id'] = tenant['tenant_id']
+                    session['tenant_id'] = tenant[0]
             
             # Flash a login success message only if the query parameter 'show_login_message' is set
             if request.args.get('show_login_message') == 'true':
